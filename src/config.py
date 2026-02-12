@@ -22,6 +22,11 @@ class SimulationConfig:
     slice_axis: Literal["x", "y", "z"] = "z"
     slice_index: int | None = None
 
+    species_count: int = 3
+    interaction_mode: Literal["symmetric", "cyclic"] = "cyclic"
+    self_attract: float = 1.0
+    cross_attract: float = -0.35
+
     deposit_amount: float = 3.0
     diffuse_rate: float = 0.24
     evap_rate: float = 0.008
@@ -32,6 +37,9 @@ class SimulationConfig:
     softmax_temperature: float = 0.1
     turn_jitter: float = 0.06
     random_turn_rate: float = 0.01
+
+    render_colormap: str = "magma"
+    render_gamma: float = 0.9
 
     export_obj: bool = False
     obj_threshold: float = 8.0
@@ -44,6 +52,8 @@ class SimulationConfig:
             raise ValueError("agents must be > 0")
         if self.steps <= 0:
             raise ValueError("steps must be > 0")
+        if self.species_count <= 0:
+            raise ValueError("species_count must be > 0")
         if self.save_every <= 0:
             raise ValueError("save_every must be > 0")
         if self.sensor_distance <= 0:
@@ -52,6 +62,8 @@ class SimulationConfig:
             raise ValueError("boundary must be 'wrap' or 'reflect'")
         if self.slice_axis not in {"x", "y", "z"}:
             raise ValueError("slice_axis must be x, y, or z")
+        if self.interaction_mode not in {"symmetric", "cyclic"}:
+            raise ValueError("interaction_mode must be 'symmetric' or 'cyclic'")
         if not (0.0 <= self.diffuse_rate <= 1.0):
             raise ValueError("diffuse_rate must be in [0, 1]")
         if not (0.0 <= self.evap_rate < 1.0):
@@ -60,6 +72,8 @@ class SimulationConfig:
             raise ValueError("max_trail must be > 0")
         if self.deposit_amount <= 0.0:
             raise ValueError("deposit_amount must be > 0")
+        if self.render_gamma <= 0.0:
+            raise ValueError("render_gamma must be > 0")
         if self.slice_index is not None and not (0 <= self.slice_index < self.size):
             raise ValueError("slice_index must be within grid bounds")
         if self.obj_threshold <= 0.0:
