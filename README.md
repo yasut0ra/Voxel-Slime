@@ -4,8 +4,6 @@ Physarum に着想を得た 3D 生成アートです。複数種のエージェ�
 
 ## 生成サンプル（GIF）
 
-GitHub の README 上でそのまま再生表示されます。
-
 | fungi | coral | nebula |
 | --- | --- | --- |
 | ![fungi-mip](outputs/fungi/fungi-mip.gif) | ![coral-mip](outputs/coral_obj/coral-mip.gif) | ![nebula-mip](outputs/nebula/nebula-mip.gif) |
