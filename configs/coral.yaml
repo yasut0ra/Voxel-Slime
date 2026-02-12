@@ -7,6 +7,11 @@ save_every: 10
 boundary: reflect
 slice_axis: z
 
+species_count: 2
+interaction_mode: symmetric
+self_attract: 1.1
+cross_attract: -0.22
+
 deposit_amount: 4.8
 diffuse_rate: 0.14
 evap_rate: 0.004
@@ -18,4 +23,7 @@ softmax_temperature: 0.06
 turn_jitter: 0.04
 random_turn_rate: 0.008
 
-obj_threshold: 12.0
+render_colormap: inferno
+render_gamma: 0.92
+
+obj_threshold: 22.0
