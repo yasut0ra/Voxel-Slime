@@ -22,6 +22,15 @@ def normalize_vectors(vectors: np.ndarray, eps: float = 1e-8) -> np.ndarray:
     return vectors / norms
 
 
+def collapse_trail_channels(trail: np.ndarray) -> np.ndarray:
+    """Collapse species channels to a single scalar field."""
+    if trail.ndim == 3:
+        return trail
+    if trail.ndim == 4:
+        return np.sum(trail, axis=0)
+    raise ValueError(f"Unsupported trail shape: {trail.shape}")
+
+
 def load_simple_yaml(path: Path | str) -> dict[str, Any]:
     """
     Load a flat key:value YAML file without external dependencies.
