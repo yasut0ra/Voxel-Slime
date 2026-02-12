@@ -34,10 +34,12 @@ def save_frame_pair(
     toxin_field: np.ndarray | None = None,
     env_overlay_strength: float = 0.28,
 ) -> tuple[Path, Path]:
-    """Save a color mid-slice and color max-intensity projection for the current step."""
+    """Save a color mid-slice and multiple 3D-aware projections for the current step."""
     frames_root = ensure_dir(Path(out_dir) / "frames")
     slice_dir = ensure_dir(frames_root / "slice")
     mip_dir = ensure_dir(frames_root / "mip")
+    depth_dir = ensure_dir(frames_root / "depth")
+    triptych_dir = ensure_dir(frames_root / "triptych")
 
     slice_img = render_slice(
         trail,
@@ -60,11 +62,31 @@ def save_frame_pair(
         toxin_field=toxin_field,
         env_overlay_strength=env_overlay_strength,
     )
+    depth_img = render_depth_projection(
+        trail=trail,
+        axis=slice_axis,
+        gamma=gamma,
+        food_field=food_field,
+        toxin_field=toxin_field,
+        env_overlay_strength=env_overlay_strength,
+    )
+    triptych_img = render_triptych(
+        trail=trail,
+        colormap=colormap,
+        gamma=gamma,
+        food_field=food_field,
+        toxin_field=toxin_field,
+        env_overlay_strength=env_overlay_strength,
+    )
 
     slice_path = slice_dir / f"slice_{step:06d}.png"
     mip_path = mip_dir / f"mip_{step:06d}.png"
+    depth_path = depth_dir / f"depth_{step:06d}.png"
+    triptych_path = triptych_dir / f"triptych_{step:06d}.png"
     iio.imwrite(slice_path, slice_img)
     iio.imwrite(mip_path, mip_img)
+    iio.imwrite(depth_path, depth_img)
+    iio.imwrite(triptych_path, triptych_img)
     return slice_path, mip_path
 
 
@@ -115,6 +137,65 @@ def render_slice(
     )
 
 
+def render_depth_projection(
+    trail: np.ndarray,
+    axis: str = "z",
+    gamma: float = 0.9,
+    food_field: np.ndarray | None = None,
+    toxin_field: np.ndarray | None = None,
+    env_overlay_strength: float = 0.28,
+) -> np.ndarray:
+    """Render depth-coded MIP to communicate near/far structure."""
+    axis_idx = _AXIS_MAP[axis]
+    scalar = _collapse_to_scalar(trail)
+    proj = np.max(scalar, axis=axis_idx)
+    depth_idx = np.argmax(scalar, axis=axis_idx).astype(np.float32)
+    depth_norm = depth_idx / max(float(scalar.shape[axis_idx] - 1), 1.0)
+
+    intensity = _robust_normalize(proj)[..., None]
+    depth_color = cm.get_cmap("turbo")(depth_norm)[..., :3].astype(np.float32)
+    rgb = depth_color * np.power(intensity, 0.85)
+    rgb = np.clip(rgb, 0.0, 1.0) ** (1.0 / max(gamma, 1e-6))
+    rgb_u8 = (rgb * 255.0).astype(np.uint8)
+
+    food_proj = np.max(food_field, axis=axis_idx) if food_field is not None else None
+    toxin_proj = np.max(toxin_field, axis=axis_idx) if toxin_field is not None else None
+    return _overlay_environment(
+        rgb=rgb_u8,
+        food=food_proj,
+        toxin=toxin_proj,
+        strength=env_overlay_strength * 0.75,
+    )
+
+
+def render_triptych(
+    trail: np.ndarray,
+    colormap: str = "magma",
+    gamma: float = 0.9,
+    food_field: np.ndarray | None = None,
+    toxin_field: np.ndarray | None = None,
+    env_overlay_strength: float = 0.28,
+) -> np.ndarray:
+    """Render x/y/z MIP panels side-by-side to emphasize volumetric structure."""
+    panels = []
+    for axis in ("x", "y", "z"):
+        panel = render_slice(
+            trail=trail,
+            axis=axis,
+            mode="mip",
+            colormap=colormap,
+            gamma=gamma,
+            food_field=food_field,
+            toxin_field=toxin_field,
+            env_overlay_strength=env_overlay_strength,
+        )
+        panels.append(_add_axis_tag(panel, axis))
+
+    gap = max(2, panels[0].shape[1] // 80)
+    gutter = np.full((panels[0].shape[0], gap, 3), 10, dtype=np.uint8)
+    return np.concatenate([panels[0], gutter, panels[1], gutter, panels[2]], axis=1)
+
+
 def _extract_slice(trail: np.ndarray, axis_idx: int, index: int) -> np.ndarray:
     """Extract a single slice from scalar or channelized fields."""
     if trail.ndim == 3:
@@ -129,6 +210,15 @@ def _extract_slice(trail: np.ndarray, axis_idx: int, index: int) -> np.ndarray:
     if axis_idx == 1:
         return trail[:, :, index, :]
     return trail[:, :, :, index]
+
+
+def _collapse_to_scalar(trail: np.ndarray) -> np.ndarray:
+    """Collapse channelized trail to scalar volume."""
+    if trail.ndim == 3:
+        return trail
+    if trail.ndim == 4:
+        return np.sum(trail, axis=0)
+    raise ValueError(f"Unsupported trail shape: {trail.shape}")
 
 
 def _extract_scalar(
@@ -192,6 +282,22 @@ def _overlay_environment(
 
     rgbf = np.clip(rgbf, 0.0, 1.0)
     return (rgbf * 255.0).astype(np.uint8)
+
+
+def _add_axis_tag(image: np.ndarray, axis: str) -> np.ndarray:
+    """Tint a thin top band to identify axis in triptych outputs."""
+    tag_colors = {
+        "x": np.array([1.0, 0.35, 0.35], dtype=np.float32),
+        "y": np.array([0.35, 1.0, 0.45], dtype=np.float32),
+        "z": np.array([0.4, 0.55, 1.0], dtype=np.float32),
+    }
+    tag_h = max(2, image.shape[0] // 40)
+
+    out = image.astype(np.float32) / 255.0
+    out[:tag_h, :, :] = (
+        0.45 * out[:tag_h, :, :] + 0.55 * tag_colors[axis][None, None, :]
+    )
+    return (np.clip(out, 0.0, 1.0) * 255.0).astype(np.uint8)
 
 
 def _robust_normalize(image: np.ndarray) -> np.ndarray:

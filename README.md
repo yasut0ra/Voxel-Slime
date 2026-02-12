@@ -38,10 +38,30 @@ python scripts/make_gif.py \
   --fps 24
 ```
 
+深度付き投影（3Dの前後感が見やすい）を GIF にする:
+
+```bash
+python scripts/make_gif.py \
+  --frames-dir outputs/fungi/frames/depth \
+  --pattern "depth_*.png" \
+  --out outputs/fungi/fungi_depth.gif \
+  --fps 24
+```
+
 トレイル場（全種チャネル合成）の等値面から OBJ メッシュを書き出し:
 
 ```bash
 python run.py --preset coral --steps 1200 --seed 42 --export-obj --obj-threshold 22 --out outputs/coral_obj
+```
+
+OBJ から回転ターンテーブル GIF を作る:
+
+```bash
+python scripts/make_turntable.py \
+  --obj outputs/coral_obj/mesh.obj \
+  --out outputs/coral_obj/coral_turntable.gif \
+  --frames 96 \
+  --fps 24
 ```
 
 ## CLI オプション
@@ -100,6 +120,8 @@ python run.py \
 
 - `outputs/<run>/frames/slice/slice_XXXXXX.png`: 軸方向スライス画像（カラー、自動コントラスト調整）。
 - `outputs/<run>/frames/mip/mip_XXXXXX.png`: 最大値投影画像（カラー、自動コントラスト調整）。
+- `outputs/<run>/frames/depth/depth_XXXXXX.png`: 深度付き投影（前後関係を色で可視化）。
+- `outputs/<run>/frames/triptych/triptych_XXXXXX.png`: x/y/z の3方向 MIP を横並び表示。
 - `outputs/<run>/mesh.obj`（任意）: 頂点法線付きの marching cubes メッシュ。
 
 ## プリセット
@@ -136,6 +158,7 @@ voxel-slime/
     coral.yaml
   scripts/
     make_gif.py
+    make_turntable.py
   requirements.txt
   README.md
   LICENSE
