@@ -11,6 +11,29 @@ species_count: 4
 interaction_mode: symmetric
 self_attract: 0.9
 cross_attract: 0.18
+predator_enabled: true
+predator_ratio: 0.1
+predator_attract: 1.6
+predator_repel: -0.9
+predator_self_attract: 0.45
+predator_consume_amount: 3.0
+predator_capture_radius: 1
+predator_food_weight: 0.55
+predator_toxin_weight: 0.25
+
+food_field_enabled: true
+toxin_field_enabled: true
+food_weight: 1.1
+toxin_weight: 1.5
+food_sources: 4
+toxin_sources: 3
+field_source_speed: 0.48
+field_source_jitter: 0.08
+field_injection_radius: 2
+food_injection_amount: 20.0
+toxin_injection_amount: 19.0
+field_diffuse_rate: 0.4
+field_evap_rate: 0.08
 
 deposit_amount: 2.0
 diffuse_rate: 0.42
@@ -25,5 +48,6 @@ random_turn_rate: 0.03
 
 render_colormap: viridis
 render_gamma: 0.75
+env_overlay_strength: 0.3
 
 obj_threshold: 11.0
