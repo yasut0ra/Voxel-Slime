@@ -7,6 +7,11 @@ save_every: 10
 boundary: wrap
 slice_axis: z
 
+species_count: 3
+interaction_mode: cyclic
+self_attract: 1.0
+cross_attract: -0.45
+
 deposit_amount: 3.2
 diffuse_rate: 0.22
 evap_rate: 0.006
@@ -18,4 +23,7 @@ softmax_temperature: 0.08
 turn_jitter: 0.05
 random_turn_rate: 0.01
 
-obj_threshold: 10.0
+render_colormap: magma
+render_gamma: 0.86
+
+obj_threshold: 18.0
