@@ -30,6 +30,9 @@ def save_frame_pair(
     slice_index: int | None = None,
     colormap: str = "magma",
     gamma: float = 0.9,
+    food_field: np.ndarray | None = None,
+    toxin_field: np.ndarray | None = None,
+    env_overlay_strength: float = 0.28,
 ) -> tuple[Path, Path]:
     """Save a color mid-slice and color max-intensity projection for the current step."""
     frames_root = ensure_dir(Path(out_dir) / "frames")
@@ -43,6 +46,9 @@ def save_frame_pair(
         mode="slice",
         colormap=colormap,
         gamma=gamma,
+        food_field=food_field,
+        toxin_field=toxin_field,
+        env_overlay_strength=env_overlay_strength,
     )
     mip_img = render_slice(
         trail,
@@ -50,6 +56,9 @@ def save_frame_pair(
         mode="mip",
         colormap=colormap,
         gamma=gamma,
+        food_field=food_field,
+        toxin_field=toxin_field,
+        env_overlay_strength=env_overlay_strength,
     )
 
     slice_path = slice_dir / f"slice_{step:06d}.png"
@@ -66,6 +75,9 @@ def render_slice(
     mode: str = "slice",
     colormap: str = "magma",
     gamma: float = 0.9,
+    food_field: np.ndarray | None = None,
+    toxin_field: np.ndarray | None = None,
+    env_overlay_strength: float = 0.28,
 ) -> np.ndarray:
     """Render either a single 2D slice or max-intensity projection along an axis."""
     axis_idx = _AXIS_MAP[axis]
@@ -84,9 +96,23 @@ def render_slice(
     if species_count == 1:
         if field.ndim == 3:
             field = field[0]
-        return _apply_colormap(field, colormap=colormap, gamma=gamma)
+        rgb = _apply_colormap(field, colormap=colormap, gamma=gamma)
+    else:
+        rgb = _compose_multispecies_rgb(field, gamma=gamma)
 
-    return _compose_multispecies_rgb(field, gamma=gamma)
+    if food_field is None and toxin_field is None:
+        return rgb
+
+    food_proj = _extract_scalar(food_field, axis_idx, mode, index) if food_field is not None else None
+    toxin_proj = (
+        _extract_scalar(toxin_field, axis_idx, mode, index) if toxin_field is not None else None
+    )
+    return _overlay_environment(
+        rgb=rgb,
+        food=food_proj,
+        toxin=toxin_proj,
+        strength=env_overlay_strength,
+    )
 
 
 def _extract_slice(trail: np.ndarray, axis_idx: int, index: int) -> np.ndarray:
@@ -103,6 +129,24 @@ def _extract_slice(trail: np.ndarray, axis_idx: int, index: int) -> np.ndarray:
     if axis_idx == 1:
         return trail[:, :, index, :]
     return trail[:, :, :, index]
+
+
+def _extract_scalar(
+    field: np.ndarray,
+    axis_idx: int,
+    mode: str,
+    index: int | None,
+) -> np.ndarray:
+    """Extract scalar slice or projection from a 3D field."""
+    if mode == "slice":
+        idx = field.shape[axis_idx] // 2 if index is None else int(index)
+        idx = max(0, min(field.shape[axis_idx] - 1, idx))
+        if axis_idx == 0:
+            return field[idx, :, :]
+        if axis_idx == 1:
+            return field[:, idx, :]
+        return field[:, :, idx]
+    return np.max(field, axis=axis_idx)
 
 
 def _apply_colormap(image: np.ndarray, colormap: str, gamma: float) -> np.ndarray:
@@ -126,6 +170,28 @@ def _compose_multispecies_rgb(field: np.ndarray, gamma: float) -> np.ndarray:
     rgb = 1.0 - np.exp(-1.75 * rgb)
     rgb = np.clip(rgb, 0.0, 1.0) ** (1.0 / max(gamma, 1e-6))
     return (rgb * 255.0).astype(np.uint8)
+
+
+def _overlay_environment(
+    rgb: np.ndarray,
+    food: np.ndarray | None,
+    toxin: np.ndarray | None,
+    strength: float,
+) -> np.ndarray:
+    """Overlay food/toxin scalar fields with cyan/orange accents."""
+    if strength <= 0.0:
+        return rgb
+
+    rgbf = rgb.astype(np.float32) / 255.0
+    if food is not None:
+        food_n = _robust_normalize(food)[..., None]
+        rgbf += strength * food_n * np.array([0.08, 0.95, 0.65], dtype=np.float32)
+    if toxin is not None:
+        toxin_n = _robust_normalize(toxin)[..., None]
+        rgbf += strength * toxin_n * np.array([1.0, 0.35, 0.08], dtype=np.float32)
+
+    rgbf = np.clip(rgbf, 0.0, 1.0)
+    return (rgbf * 255.0).astype(np.uint8)
 
 
 def _robust_normalize(image: np.ndarray) -> np.ndarray:
