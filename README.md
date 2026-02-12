@@ -1,8 +1,8 @@
 # Voxel Slime
 
-Physarum-inspired 3D generative art: thousands of agents deposit and follow trails inside a voxel grid to grow organic network structures.
+Physarum に着想を得た 3D 生成アートです。大量のエージェントがボクセル空間でトレイルを残し、追従しながら、有機的なネットワーク構造を成長させます。
 
-## Quickstart
+## クイックスタート
 
 ```bash
 python -m venv .venv
@@ -10,13 +10,13 @@ source .venv/bin/activate
 pip install -r requirements.txt
 ```
 
-Run a striking default simulation (fungi preset, 2,000 steps):
+まずは見栄えのよい標準シミュレーション（`fungi` プリセット、2,000 ステップ）:
 
 ```bash
 python run.py --preset fungi --seed 7 --out outputs/fungi
 ```
 
-Build a GIF from max-intensity frames:
+最大値投影フレームから GIF を作成:
 
 ```bash
 python scripts/make_gif.py \
@@ -26,13 +26,13 @@ python scripts/make_gif.py \
   --fps 24
 ```
 
-Export OBJ mesh from trail isosurface:
+トレイル場の等値面から OBJ メッシュを書き出し:
 
 ```bash
 python run.py --preset coral --steps 1200 --seed 42 --export-obj --obj-threshold 12 --out outputs/coral_obj
 ```
 
-## CLI
+## CLI オプション
 
 ```bash
 python run.py \
@@ -50,33 +50,33 @@ python run.py \
   --slice-index 48
 ```
 
-## Algorithm (5 steps)
+## アルゴリズム（5ステップ）
 
-1. Initialize many agents with random positions and headings in a 3D voxel grid.
-2. Sense trail concentration in multiple directions around each heading (forward, left/right, up/down, diagonals).
-3. Turn toward stronger trail, move one voxel-neighborhood step, and deposit new trail.
-4. Diffuse trail (neighbor averaging blur) and evaporate trail each iteration.
-5. Render grayscale frames (mid-slice + max-intensity projection) and optionally extract a 3D mesh via marching cubes.
+1. 3D ボクセルグリッド内に、多数のエージェントをランダムな位置・向きで初期化します。
+2. 各エージェントは進行方向の周辺（前方、左右、上下、対角）でトレイル濃度をセンシングします。
+3. 濃度が高い方向へ旋回し、1 ボクセル移動してトレイルを堆積します。
+4. 毎ステップ、トレイル場に拡散（近傍平均によるぼかし）と蒸発を適用します。
+5. グレースケール画像（中央スライス + 最大値投影）を保存し、必要に応じて marching cubes で 3D メッシュを抽出します。
 
-## Outputs
+## 出力
 
-- `outputs/<run>/frames/slice/slice_XXXXXX.png`: axis-aligned slice frames with auto-contrast.
-- `outputs/<run>/frames/mip/mip_XXXXXX.png`: max-intensity projection frames with auto-contrast.
-- `outputs/<run>/mesh.obj` (optional): marching cubes mesh with vertex normals.
+- `outputs/<run>/frames/slice/slice_XXXXXX.png`: 軸方向スライス画像（自動コントラスト調整）。
+- `outputs/<run>/frames/mip/mip_XXXXXX.png`: 最大値投影画像（自動コントラスト調整）。
+- `outputs/<run>/mesh.obj`（任意）: 頂点法線付きの marching cubes メッシュ。
 
-## Presets
+## プリセット
 
-- `fungi`: moderate diffusion + low evaporation + strong sensing -> filament networks.
-- `nebula`: high diffusion + higher evaporation + soft sensing -> cloudy nebula-like forms.
-- `coral`: lower diffusion + low evaporation + higher deposit -> chunky branching coral forms.
+- `fungi`: 中程度の拡散 + 低い蒸発 + 強いセンシング -> 菌糸状のネットワーク。
+- `nebula`: 強い拡散 + 高めの蒸発 + 柔らかいセンシング -> 雲状のネビュラ表現。
+- `coral`: 低めの拡散 + 低い蒸発 + 多めの堆積 -> 太く分岐するサンゴ状構造。
 
-## Notes
+## 補足
 
-- Deterministic runs are supported with `--seed`.
-- Inspired by Physarum particle/trail models and chemotaxis-like behavior.
-- For faster exploratory tests, reduce `--steps`, `--agents`, or `--size`.
+- `--seed` を指定すると再現可能な（決定論的な）実行になります。
+- Physarum の particle/trail モデルと、走化性に類似した振る舞いに着想を得ています。
+- 試行を高速化したい場合は `--steps`、`--agents`、`--size` を下げてください。
 
-## Repository Layout
+## リポジトリ構成
 
 ```text
 voxel-slime/
