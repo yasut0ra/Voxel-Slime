@@ -8,12 +8,12 @@ from time import perf_counter
 
 import numpy as np
 
-from .agents import initialize_agents, step_agents
+from .agents import build_interaction_matrix, initialize_agents, step_agents
 from .config import SimulationConfig
 from .export import export_obj
 from .render import save_frame_pair
 from .trail import diffuse_and_evaporate
-from .utils import ensure_dir
+from .utils import collapse_trail_channels, ensure_dir
 
 
 @dataclass(slots=True)
@@ -33,22 +33,26 @@ def run_simulation(cfg: SimulationConfig) -> SimulationResult:
     out_dir = ensure_dir(cfg.out_dir)
     rng = np.random.default_rng(cfg.seed)
 
-    trail = np.zeros((cfg.size, cfg.size, cfg.size), dtype=np.float32)
-    agents = initialize_agents(count=cfg.agents, size=cfg.size, rng=rng)
+    trail = np.zeros((cfg.species_count, cfg.size, cfg.size, cfg.size), dtype=np.float32)
+    agents = initialize_agents(
+        count=cfg.agents, size=cfg.size, species_count=cfg.species_count, rng=rng
+    )
+    interaction_matrix = build_interaction_matrix(cfg)
 
     frames_saved = 0
     obj_path: Path | None = None
 
     start = perf_counter()
     print(
-        f"Starting simulation | size={cfg.size}^3 agents={cfg.agents} steps={cfg.steps} "
-        f"boundary={cfg.boundary} seed={cfg.seed}"
+        f"Starting simulation | size={cfg.size}^3 agents={cfg.agents} "
+        f"species={cfg.species_count} mode={cfg.interaction_mode} "
+        f"steps={cfg.steps} boundary={cfg.boundary} seed={cfg.seed}"
     )
 
     progress_stride = max(1, cfg.steps // 20)
 
     for step in range(1, cfg.steps + 1):
-        collisions = step_agents(agents, trail, cfg, rng)
+        collisions = step_agents(agents, trail, interaction_matrix, cfg, rng)
         diffuse_and_evaporate(trail, cfg)
 
         should_save = step == 1 or step == cfg.steps or step % cfg.save_every == 0
@@ -61,6 +65,8 @@ def run_simulation(cfg: SimulationConfig) -> SimulationResult:
                 out_dir=out_dir,
                 slice_axis=cfg.slice_axis,
                 slice_index=cfg.slice_index,
+                colormap=cfg.render_colormap,
+                gamma=cfg.render_gamma,
             )
             frames_saved += 1
 
@@ -76,8 +82,11 @@ def run_simulation(cfg: SimulationConfig) -> SimulationResult:
 
     if cfg.export_obj:
         target_path = Path(out_dir) / "mesh.obj"
+        scalar_field = collapse_trail_channels(trail)
         try:
-            obj_path = export_obj(trail, threshold=cfg.obj_threshold, out_path=target_path)
+            obj_path = export_obj(
+                scalar_field, threshold=cfg.obj_threshold, out_path=target_path
+            )
             print(f"OBJ exported: {obj_path}")
         except ValueError as err:
             print(f"OBJ export skipped: {err}")
