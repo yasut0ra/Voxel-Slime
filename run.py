@@ -24,6 +24,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--interaction-mode", choices=["symmetric", "cyclic"])
     parser.add_argument("--self-attract", type=float)
     parser.add_argument("--cross-attract", type=float)
+    parser.add_argument("--predator", action="store_true")
     parser.add_argument("--no-predator", action="store_true")
     parser.add_argument("--predator-ratio", type=float)
     parser.add_argument("--predator-attract", type=float)
@@ -34,7 +35,9 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--predator-food-weight", type=float)
     parser.add_argument("--predator-toxin-weight", type=float)
 
+    parser.add_argument("--food-field", action="store_true")
     parser.add_argument("--no-food-field", action="store_true")
+    parser.add_argument("--toxin-field", action="store_true")
     parser.add_argument("--no-toxin-field", action="store_true")
     parser.add_argument("--food-weight", type=float)
     parser.add_argument("--toxin-weight", type=float)
@@ -79,6 +82,24 @@ def main() -> None:
     args = parse_args()
     base_cfg = load_preset(args.preset)
 
+    predator_enabled = None
+    if args.predator:
+        predator_enabled = True
+    if args.no_predator:
+        predator_enabled = False
+
+    food_field_enabled = None
+    if args.food_field:
+        food_field_enabled = True
+    if args.no_food_field:
+        food_field_enabled = False
+
+    toxin_field_enabled = None
+    if args.toxin_field:
+        toxin_field_enabled = True
+    if args.no_toxin_field:
+        toxin_field_enabled = False
+
     overrides = {
         "size": args.size,
         "agents": args.agents,
@@ -88,7 +109,7 @@ def main() -> None:
         "interaction_mode": args.interaction_mode,
         "self_attract": args.self_attract,
         "cross_attract": args.cross_attract,
-        "predator_enabled": False if args.no_predator else None,
+        "predator_enabled": predator_enabled,
         "predator_ratio": args.predator_ratio,
         "predator_attract": args.predator_attract,
         "predator_repel": args.predator_repel,
@@ -97,8 +118,8 @@ def main() -> None:
         "predator_capture_radius": args.predator_capture_radius,
         "predator_food_weight": args.predator_food_weight,
         "predator_toxin_weight": args.predator_toxin_weight,
-        "food_field_enabled": False if args.no_food_field else None,
-        "toxin_field_enabled": False if args.no_toxin_field else None,
+        "food_field_enabled": food_field_enabled,
+        "toxin_field_enabled": toxin_field_enabled,
         "food_weight": args.food_weight,
         "toxin_weight": args.toxin_weight,
         "food_sources": args.food_sources,

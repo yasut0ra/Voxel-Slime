@@ -1,6 +1,6 @@
 # Voxel Slime
 
-Physarum に着想を得た 3D 生成アートです。複数種のエージェントがボクセル空間でトレイルを残し、餌場・毒場・捕食者との相互作用で有機的なネットワークを成長させます。
+Physarum に着想を得た 3D 生成アートです。複数種のエージェントがボクセル空間でトレイルを残し、有機的なネットワークを成長させます。捕食者・餌場・毒場はオプションで有効化できます。
 
 ## 生成サンプル（GIF）
 
@@ -22,10 +22,10 @@ pip install -r requirements.txt
 python run.py --preset fungi --seed 7 --out outputs/fungi
 ```
 
-捕食者なしで比較したい場合:
+捕食者 + 餌場 + 毒場を有効化する場合:
 
 ```bash
-python run.py --preset fungi --seed 7 --no-predator --out outputs/fungi_no_pred
+python run.py --preset fungi --seed 7 --predator --food-field --toxin-field --out outputs/fungi_hunt
 ```
 
 最大値投影フレームから GIF を作成:
@@ -57,6 +57,9 @@ python run.py \
   --interaction-mode {symmetric,cyclic} \
   --self-attract 1.0 \
   --cross-attract -0.35 \
+  --predator \
+  --food-field \
+  --toxin-field \
   --predator-ratio 0.14 \
   --predator-attract 1.8 \
   --predator-repel -1.25 \
@@ -88,10 +91,10 @@ python run.py \
 ## アルゴリズム（5ステップ）
 
 1. 3D ボクセルグリッド内に、多数のエージェントをランダムな位置・向き・種別で初期化します。
-2. 餌場と毒場の「移動ソース」がトレイルとは別の外部場を形成し、毎ステップ注入・拡散・蒸発します。
-3. 各エージェントは進行方向の周辺（前方、左右、上下、対角）で、全種トレイル + 餌場 + 毒場をセンシングします。
+2. （オプション）餌場と毒場の「移動ソース」がトレイルとは別の外部場を形成し、毎ステップ注入・拡散・蒸発します。
+3. 各エージェントは進行方向の周辺（前方、左右、上下、対角）で、全種トレイル（+ オプションで餌場/毒場）をセンシングします。
 4. 種間相互作用行列でスコア化して旋回・移動し、各自の種チャネルへトレイルを堆積します。
-5. 捕食者種は prey trail を追跡し、捕捉半径内の prey をリスポーンさせつつ trail を削り、崩壊と再生のダイナミクスを生みます。
+5. （オプション）捕食者種は prey trail を追跡し、捕捉半径内の prey をリスポーンさせつつ trail を削り、崩壊と再生のダイナミクスを生みます。
 
 ## 出力
 
@@ -101,15 +104,16 @@ python run.py \
 
 ## プリセット
 
-- `fungi`: 3種 + 捕食者 + 餌/毒場 -> 菌糸状ネットワークに断裂と再接続が混ざる。
-- `nebula`: 4種 + 積極的な移動ソース -> 雲状の重なりが脈動する。
-- `coral`: 2種 + 強い捕食圧 -> 太い枝が削られながら再成長する。
+- `fungi`: 3種の循環相互作用（デフォルト）で菌糸状ネットワーク。
+- `nebula`: 4種の相互引力（デフォルト）で雲状の重なり。
+- `coral`: 2種の相互反発（デフォルト）で太い分岐構造。
 
 ## 補足
 
 - `--seed` を指定すると再現可能な（決定論的な）実行になります。
 - Physarum の particle/trail モデルと、走化性に類似した振る舞いに着想を得ています。
 - 試行を高速化したい場合は `--steps`、`--agents`、`--size` を下げてください。
+- 捕食者・餌場・毒場はデフォルトで無効です（`--predator --food-field --toxin-field` で有効化）。
 - 見た目を変えるには `--predator-ratio`、`--food-weight`、`--toxin-weight`、`--field-source-speed`、`--render-gamma` の調整が効きます。
 
 ## リポジトリ構成

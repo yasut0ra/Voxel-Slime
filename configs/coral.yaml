@@ -11,7 +11,7 @@ species_count: 2
 interaction_mode: symmetric
 self_attract: 1.1
 cross_attract: -0.22
-predator_enabled: true
+predator_enabled: false
 predator_ratio: 0.2
 predator_attract: 2.2
 predator_repel: -1.55
@@ -21,8 +21,8 @@ predator_capture_radius: 1
 predator_food_weight: 0.25
 predator_toxin_weight: 0.1
 
-food_field_enabled: true
-toxin_field_enabled: true
+food_field_enabled: false
+toxin_field_enabled: false
 food_weight: 1.5
 toxin_weight: 1.05
 food_sources: 2

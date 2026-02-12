@@ -27,7 +27,7 @@ class SimulationConfig:
     self_attract: float = 1.0
     cross_attract: float = -0.35
 
-    predator_enabled: bool = True
+    predator_enabled: bool = False
     predator_ratio: float = 0.14
     predator_attract: float = 1.8
     predator_repel: float = -1.25
@@ -37,8 +37,8 @@ class SimulationConfig:
     predator_food_weight: float = 0.45
     predator_toxin_weight: float = 0.2
 
-    food_field_enabled: bool = True
-    toxin_field_enabled: bool = True
+    food_field_enabled: bool = False
+    toxin_field_enabled: bool = False
     food_weight: float = 1.25
     toxin_weight: float = 1.3
     food_sources: int = 3
