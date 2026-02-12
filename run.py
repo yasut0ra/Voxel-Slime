@@ -20,6 +20,10 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--agents", type=int)
     parser.add_argument("--steps", type=int)
     parser.add_argument("--seed", type=int)
+    parser.add_argument("--species", dest="species_count", type=int)
+    parser.add_argument("--interaction-mode", choices=["symmetric", "cyclic"])
+    parser.add_argument("--self-attract", type=float)
+    parser.add_argument("--cross-attract", type=float)
 
     parser.add_argument("--out", dest="out_dir", type=str)
     parser.add_argument("--save-every", type=int)
@@ -27,6 +31,8 @@ def parse_args() -> argparse.Namespace:
 
     parser.add_argument("--slice-axis", choices=["x", "y", "z"])
     parser.add_argument("--slice-index", type=int)
+    parser.add_argument("--render-colormap", type=str)
+    parser.add_argument("--render-gamma", type=float)
 
     parser.add_argument("--export-obj", action="store_true")
     parser.add_argument("--obj-threshold", type=float)
@@ -54,11 +60,17 @@ def main() -> None:
         "agents": args.agents,
         "steps": args.steps,
         "seed": args.seed,
+        "species_count": args.species_count,
+        "interaction_mode": args.interaction_mode,
+        "self_attract": args.self_attract,
+        "cross_attract": args.cross_attract,
         "out_dir": args.out_dir,
         "save_every": args.save_every,
         "boundary": args.boundary,
         "slice_axis": args.slice_axis,
         "slice_index": args.slice_index,
+        "render_colormap": args.render_colormap,
+        "render_gamma": args.render_gamma,
         "obj_threshold": args.obj_threshold,
         "export_obj": args.export_obj,
     }
