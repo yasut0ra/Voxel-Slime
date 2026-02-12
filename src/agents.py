@@ -16,19 +16,24 @@ class AgentState:
 
     positions: np.ndarray  # (N, 3), int32
     directions: np.ndarray  # (N, 3), float32
+    species_ids: np.ndarray  # (N,), int32
 
 
-def initialize_agents(count: int, size: int, rng: np.random.Generator) -> AgentState:
-    """Create random agent positions and random unit directions."""
+def initialize_agents(
+    count: int, size: int, species_count: int, rng: np.random.Generator
+) -> AgentState:
+    """Create random agent positions, random unit directions, and species labels."""
     positions = rng.integers(0, size, size=(count, 3), dtype=np.int32)
     directions = rng.normal(size=(count, 3)).astype(np.float32)
     directions = normalize_vectors(directions).astype(np.float32)
-    return AgentState(positions=positions, directions=directions)
+    species_ids = rng.integers(0, species_count, size=count, dtype=np.int32)
+    return AgentState(positions=positions, directions=directions, species_ids=species_ids)
 
 
 def step_agents(
     state: AgentState,
     trail: np.ndarray,
+    interaction_matrix: np.ndarray,
     cfg: SimulationConfig,
     rng: np.random.Generator,
 ) -> int:
@@ -36,6 +41,7 @@ def step_agents(
     size = cfg.size
     positions = state.positions
     directions = state.directions
+    species_ids = state.species_ids
     count = positions.shape[0]
 
     right, up = _orthonormal_basis(directions)
@@ -65,11 +71,12 @@ def step_agents(
     else:
         np.clip(sensor_positions, 0, size - 1, out=sensor_positions)
 
-    sample_scores = trail[
-        sensor_positions[:, :, 0],
-        sensor_positions[:, :, 1],
-        sensor_positions[:, :, 2],
-    ]
+    sample_scores = _compute_sense_scores(
+        trail=trail,
+        sensor_positions=sensor_positions,
+        species_ids=species_ids,
+        interaction_matrix=interaction_matrix,
+    )
 
     chosen_dirs = _select_directions(
         scores=sample_scores,
@@ -115,11 +122,50 @@ def step_agents(
 
     np.add.at(
         trail,
-        (state.positions[:, 0], state.positions[:, 1], state.positions[:, 2]),
+        (
+            species_ids,
+            state.positions[:, 0],
+            state.positions[:, 1],
+            state.positions[:, 2],
+        ),
         cfg.deposit_amount,
     )
 
     return collisions
+
+
+def build_interaction_matrix(cfg: SimulationConfig) -> np.ndarray:
+    """Construct species interaction weights used by sensor scoring."""
+    count = cfg.species_count
+    matrix = np.full((count, count), cfg.cross_attract, dtype=np.float32)
+    np.fill_diagonal(matrix, cfg.self_attract)
+
+    if cfg.interaction_mode == "cyclic" and count >= 2:
+        matrix.fill(0.0)
+        for species in range(count):
+            matrix[species, species] = cfg.self_attract
+            matrix[species, (species - 1) % count] = abs(cfg.cross_attract)
+            matrix[species, (species + 1) % count] = cfg.cross_attract
+
+    return matrix
+
+
+def _compute_sense_scores(
+    trail: np.ndarray,
+    sensor_positions: np.ndarray,
+    species_ids: np.ndarray,
+    interaction_matrix: np.ndarray,
+) -> np.ndarray:
+    """Sample all channels and reduce to a directional score per agent."""
+    samples = trail[
+        :,
+        sensor_positions[:, :, 0],
+        sensor_positions[:, :, 1],
+        sensor_positions[:, :, 2],
+    ]
+    samples = np.transpose(samples, (1, 2, 0))
+    weights = interaction_matrix[species_ids]
+    return np.einsum("dnk,nk->dn", samples, weights, optimize=True)
 
 
 def _orthonormal_basis(direction: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
