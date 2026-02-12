@@ -1,0 +1,21 @@
+# Coral preset: chunkier branching with lower diffusion and strong deposits.
+size: 96
+agents: 50000
+steps: 2000
+save_every: 10
+
+boundary: reflect
+slice_axis: z
+
+deposit_amount: 4.8
+diffuse_rate: 0.14
+evap_rate: 0.004
+max_trail: 255.0
+
+sensor_distance: 3
+sensor_spread: 0.95
+softmax_temperature: 0.06
+turn_jitter: 0.04
+random_turn_rate: 0.008
+
+obj_threshold: 12.0
