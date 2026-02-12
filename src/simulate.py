@@ -10,6 +10,7 @@ import numpy as np
 
 from .agents import build_interaction_matrix, initialize_agents, step_agents
 from .config import SimulationConfig
+from .environment import initialize_environment, update_environment
 from .export import export_obj
 from .render import save_frame_pair
 from .trail import diffuse_and_evaporate
@@ -34,10 +35,9 @@ def run_simulation(cfg: SimulationConfig) -> SimulationResult:
     rng = np.random.default_rng(cfg.seed)
 
     trail = np.zeros((cfg.species_count, cfg.size, cfg.size, cfg.size), dtype=np.float32)
-    agents = initialize_agents(
-        count=cfg.agents, size=cfg.size, species_count=cfg.species_count, rng=rng
-    )
+    agents = initialize_agents(cfg=cfg, rng=rng)
     interaction_matrix = build_interaction_matrix(cfg)
+    env = initialize_environment(cfg=cfg, rng=rng)
 
     frames_saved = 0
     obj_path: Path | None = None
@@ -46,13 +46,24 @@ def run_simulation(cfg: SimulationConfig) -> SimulationResult:
     print(
         f"Starting simulation | size={cfg.size}^3 agents={cfg.agents} "
         f"species={cfg.species_count} mode={cfg.interaction_mode} "
+        f"predator={cfg.predator_enabled} food={cfg.food_field_enabled} toxin={cfg.toxin_field_enabled} "
         f"steps={cfg.steps} boundary={cfg.boundary} seed={cfg.seed}"
     )
 
     progress_stride = max(1, cfg.steps // 20)
 
     for step in range(1, cfg.steps + 1):
-        collisions = step_agents(agents, trail, interaction_matrix, cfg, rng)
+        update_environment(env, cfg, rng)
+
+        collisions, predations = step_agents(
+            agents,
+            trail,
+            interaction_matrix,
+            cfg,
+            rng,
+            food_field=env.food if cfg.food_field_enabled else None,
+            toxin_field=env.toxin if cfg.toxin_field_enabled else None,
+        )
         diffuse_and_evaporate(trail, cfg)
 
         should_save = step == 1 or step == cfg.steps or step % cfg.save_every == 0
@@ -67,6 +78,9 @@ def run_simulation(cfg: SimulationConfig) -> SimulationResult:
                 slice_index=cfg.slice_index,
                 colormap=cfg.render_colormap,
                 gamma=cfg.render_gamma,
+                food_field=env.food if cfg.food_field_enabled else None,
+                toxin_field=env.toxin if cfg.toxin_field_enabled else None,
+                env_overlay_strength=cfg.env_overlay_strength,
             )
             frames_saved += 1
 
@@ -76,7 +90,7 @@ def run_simulation(cfg: SimulationConfig) -> SimulationResult:
             eta = (cfg.steps - step) / max(sps, 1e-9)
             save_mark = "save" if should_save else "...."
             print(
-                f"[{step:5d}/{cfg.steps}] {save_mark} collisions={collisions:5d} "
+                f"[{step:5d}/{cfg.steps}] {save_mark} collisions={collisions:5d} predations={predations:5d} "
                 f"speed={sps:7.1f} step/s eta={eta:7.1f}s"
             )
 
